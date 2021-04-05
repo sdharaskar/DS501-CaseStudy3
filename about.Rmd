@@ -1,0 +1,62 @@
+---
+title: <font size="6"> About Project</font> 
+author: 
+output:
+  html_document:
+    theme: flatly
+    highlight: pygments
+    number_sections: false
+    self_contained: true
+    lib_dir: libs
+    fig_caption: true
+    toc: false
+    toc_float: false
+
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(warning=FALSE)
+```
+
+A stroke, sometimes called a brain attack, occurs when something blocks blood supply to part of the brain or when a blood vessel in the brain bursts. In either case, parts of the brain become damaged or die. A stroke can cause lasting brain damage, long-term disability, or even death.
+
+Following are some of the statistics about stroke from CDC website
+
+* In 2018, 1 in every 6 deaths from cardiovascular disease was due to stroke.
+* Someone in the United States has a stroke every 40 seconds. Every 4 minutes, someone dies of stroke.
+* Every year, more than 795,000 people in the United States have a stroke. About 610,000 of these are first or new strokes.
+* About 185,000 strokes—nearly 1 of 4—are in people who have had a previous stroke.
+* About 87% of all strokes are ischemic strokes, in which blood flow to the brain is blocked.
+Stroke-related costs in the United States came to nearly $46 billion between 2014 and 2015.2 This total includes the cost of health care services, medicines to treat stroke, and missed days of work.
+* Stroke is a leading cause of serious long-term disability. Stroke reduces mobility in more than half of stroke survivors age 65 and over.
+
+
+Ther are certain conditions that increase the risk of getting a stroke. The motivation behind this dashboard is to help people understand the risk and take preventive measures *. 
+
+This project is a case study for the course-work "DS501 - Introduction to Data Science" at Worcester Polytechnic Institute. Instructors - Narhara Chari Dingari, PhD. 
+
+<img src="www/wpi.png" width="500"/>
+
+## The Stroke Predictor
+
+The **main conditions** of the analysis are:
+
+* Gender
+* Age
+* High Blood Pressure
+* Heart Disease
+* Diabetes
+* Obesity
+
+
+
+The **dataset** can be found here: [Kaggle](https://www.kaggle.com/fedesoriano/stroke-prediction-dataset)
+
+
+## The Code of Project 
+
+The code is written in R using Shiny. The documentation of web application and
+the website that you visited just now is published with R Markdown for better flexibility. 
+
+**Full code** is freely available at: 
+[Github]( )

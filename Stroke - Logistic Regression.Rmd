@@ -1,0 +1,251 @@
+---
+title: "Logistic Regression"
+author: "DS 501 - Introduction to Data Science"
+output:
+  html_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r, message=FALSE, echo=FALSE}
+setwd(getwd())
+```
+
+### Loading packages that we will be using
+```{r, message=FALSE}
+library(ggplot2)
+library(ROCR)
+library(popbio)
+library(readr)
+library(superml)
+library(dplyr)
+```
+
+### Load and explore the data
+```{r, message=FALSE}
+stroke <- read_csv("stroke.csv")
+head(stroke)
+strokeData = stroke[,2:12]
+head(strokeData)
+```
+
+### How many patients had stroke?
+```{r}
+sum(strokeData$stroke)
+```
+
+### Data cleanup
+```{r}
+strokeData[strokeData == "N/A"] <- NA
+cleanStrokeData <- na.omit(strokeData)
+
+cleanStrokeData$gender <- as.factor(cleanStrokeData$gender)
+cleanStrokeData$hypertension <- as.factor(cleanStrokeData$hypertension)
+cleanStrokeData$heart_disease <- as.factor(cleanStrokeData$heart_disease)
+cleanStrokeData$ever_married <- as.factor(cleanStrokeData$ever_married)
+cleanStrokeData$work_type <- as.factor(cleanStrokeData$work_type)
+cleanStrokeData$Residence_type <- as.factor(cleanStrokeData$Residence_type)
+cleanStrokeData$smoking_status <- as.factor(cleanStrokeData$smoking_status)
+cleanStrokeData$bmi <- as.numeric(cleanStrokeData$bmi)
+```
+### Plot the data
+```{r}
+ qplot(bmi, stroke, data=cleanStrokeData) + geom_point(colour = "#3366FF", size = 3)
+```
+
+### Plot the conditional denisty plot
+Computes and plots conditional densities describing how the conditional distribution of a categorical variable `stroke` changes over a numerical variable `age`.
+```{r}
+cdplot(factor(stroke) ~ cleanStrokeData$avg_glucose_level, data=cleanStrokeData, main="Estimated categ prob", ylab='Stroke')
+qplot(avg_glucose_level, ..count.., data=cleanStrokeData, geom="density", fill=factor(stroke), position="fill") + 
+  ylab('Probability')+theme(legend.position='bottom')
+
+```
+
+```{r}
+cdplot(factor(stroke) ~ cleanStrokeData$age, data=cleanStrokeData, main="Estimated categ prob", ylab='Stroke')
+qplot(age, ..count.., data=cleanStrokeData, geom="density", fill=factor(stroke), position="fill") + 
+  ylab('Probability')+theme(legend.position='bottom')
+
+```
+
+```{r}
+cdplot(factor(stroke) ~ cleanStrokeData$bmi, data=cleanStrokeData, main="Estimated categ prob", ylab='Stroke')
+qplot(bmi, ..count.., data=cleanStrokeData, geom="density", fill=factor(stroke), position="fill") + 
+  ylab('Probability')+theme(legend.position='bottom')
+
+```
+
+
+```{r}
+
+ggplot(cleanStrokeData
+       , aes(bmi, stroke))+
+  geom_point() +
+  geom_smooth(method = "glm", se = FALSE, method.args = list(family="binomial"))
+
+
+
+```
+
+
+### Perform the logistic regression
+Function `glm` is used to fit generalized linear models, specified by giving a symbolic description of the linear predictor and a description of the error distribution.
+
+```{r}
+strokeLogreg = glm(stroke ~ hypertension+heart_disease+avg_glucose_level+bmi, data=cleanStrokeData, family=binomial(link="logit"))
+summary(strokeLogreg)
+```
+
+### Generate confidence intervals for regression coefficients
+```{r}
+confint(strokeLogreg)
+```
+
+### Split the data as Training and Test sets
+```{r}
+set.seed(2015)
+## Convert stroke to factor
+cleanStrokeData <- cleanStrokeData %>% mutate(stroke = as.factor(cleanStrokeData$stroke))
+## Generate random ordering
+rand <- sample(nrow(cleanStrokeData))
+cleanStrokeData <- cleanStrokeData[rand,]
+splitStroke = caret::createDataPartition(cleanStrokeData$stroke, p = 0.8, list=F, times=1)
+head(splitStroke)
+trainStroke = cleanStrokeData[splitStroke,]
+head(trainStroke)
+# testStroke = cleanStrokeData[-!row.names(strokeData) %in% row.names(trainStroke),]
+testStroke = cleanStrokeData[-splitStroke,]
+head(testStroke)
+```
+
+### Apply Logistic Regression on Training set
+```{r}
+trainStrokeLR = glm(stroke ~ age+hypertension+heart_disease+avg_glucose_level+bmi, data=trainStroke, family=binomial(link="logit"))
+summary(trainStrokeLR)
+```
+
+### Predict on Test data set
+```{r}
+testStroke$Predicted = round(predict(trainStrokeLR,
+                                     testStroke[,c( 2, 3, 4, 8, 9)],
+                                     type="response"), 2)
+head(testStroke)
+```
+
+### Visualization of Logistic Regression results
+* `popbio` package
+```{r}
+plot(trainStroke$bmi, trainStroke$stroke, xlab="bmi", ylab="P(stroke)")
+trainLR = glm(stroke ~ bmi, data=trainStroke, family=binomial(link="logit"))
+curve(predict(trainLR,data.frame(bmi=x),type="resp"),add=TRUE, n=10000, type = "l")
+points(trainStroke$bmi,fitted(trainLR),pch=20)
+popbio::logi.hist.plot(as.numeric(trainStroke$bmi), trainStroke$stroke, logi.mod = 1, boxp=FALSE,type="hist" )
+```
+
+
+```{r}
+trainStroke %>%
+#  mutate(prob = ifelse(diabetes == "pos", 1, 0)) %>%
+  ggplot(aes(bmi, stroke)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth(method = "glm", method.args = list(family = "binomial")) +
+  labs(
+    title = "Logistic Regression Model", 
+    x = "Body Mass Index",
+    y = "Probability of stroke"
+    )
+
+```
+
+
+
+
+
+
+* `visreg` package
+```{r}
+logReg = glm(stroke ~ bmi + gender, data=trainStroke, family=binomial(link="logit"))
+visreg::visreg(logReg, "bmi", scale="response", partial=FALSE, xlab="bmi", ylab="P(stroke)", rug=2, by = "gender")
+```
+```{r}
+logReg = glm(stroke ~ age, data=trainStroke, family=binomial(link="logit"))
+visreg::visreg(logReg, "age", scale="response", partial=FALSE, xlab="age", ylab="P(stroke)", rug=2)
+```
+
+
+```{r}
+logReg = glm(stroke ~ avg_glucose_level + gender, data=trainStroke, family=binomial(link="logit"))
+visreg::visreg(logReg, "avg_glucose_level", scale="response", partial=FALSE, xlab="avg_glucose_level", ylab="P(stroke)", rug=2, by ="gender")
+```
+
+
+```{r}
+logReg = glm(stroke ~ avg_glucose_level, data=trainStroke, family=binomial(link="logit"))
+visreg::visreg(logReg, "avg_glucose_level", scale="response", partial=FALSE, xlab="avg_glucose_level", ylab="P(stroke)", rug=2)
+```
+
+
+
+
+
+### Model evaluation - Receiver Operating Characteristic (ROC) Curve
+Every classifier evaluation using ROCR starts with creating a prediction object. This function is used to transform the input data into a standardized format.
+
+```{r}
+pred = predict(trainStrokeLR, testStroke[,c(2, 3, 4, 8, 9)], type="response")
+pObject = ROCR::prediction(pred, testStroke$stroke)
+```
+
+All kinds of predictor evaluations are performed using `performance` function
+
+```{r}
+rocObj = ROCR::performance(pObject, measure="tpr", x.measure="fpr")
+aucObj = ROCR::performance(pObject, measure="auc")  
+plot(rocObj, main = paste("Area under the curve:", round(aucObj@y.values[[1]] ,4))) 
+```
+
+### Random Model 
+```{r}
+trainStrokeRandom = trainStroke
+set.seed(1235)
+trainStrokeRandom$stroke = sample(c(0,1), replace=T, size=nrow(trainStroke))
+logRegRandom = glm(stroke ~ hypertension+heart_disease+avg_glucose_level+bmi, data=trainStrokeRandom, family=binomial(link="logit"))
+
+rand_pred = predict(logRegRandom, testStroke[,c(3, 4, 8, 9)], type="response")
+randObject = ROCR::prediction(rand_pred, testStroke$stroke )
+rocRandObj = ROCR::performance(randObject, measure="tpr", x.measure="fpr")
+aucRandObj = ROCR::performance(randObject, measure="auc")  
+plot(rocRandObj, main = paste("Area under the curve:", round(aucRandObj@y.values[[1]] ,4))) 
+```
+
+### Assess model fit
+```{r}
+Phat = predict(trainStrokeLR,testStroke,type="response")
+head(Phat)
+prop.table(xtabs(~ stroke, data=testStroke))
+thresh = 0.5
+facHat = cut(Phat, breaks=c(-Inf, thresh, Inf), labels=c(0, 1))
+cTab   = xtabs(~ stroke + facHat, data=testStroke)
+addmargins(cTab)
+```
+
+* Correct classification rate
+```{r}
+CCR = sum(diag(cTab)) / sum(cTab)
+CCR
+```
+
+### Updating models
+If you want to modify a model you may consider using the special function `update`
+```{r, eval=FALSE}
+lrUpdate = update(trainChurnLR, ~ . -Married-Churned_contacts-Cust_years)
+summary(lrUpdate)
+pred = predict(lrUpdate, testChurn[,2:5], type="response")
+pObject = ROCR::prediction(pred, testChurn$Churned )
+rocObj = ROCR::performance(pObject, measure="tpr", x.measure="fpr")
+aucObj = ROCR::performance(pObject, measure="auc")  
+plot(rocObj, main = paste("Area under the curve:", round(aucObj@y.values[[1]] ,4))) 
+```
+
